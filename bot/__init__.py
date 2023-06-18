@@ -593,27 +593,36 @@ if ospath.exists('shorteners.txt'):
             if len(temp) == 2:
                 shorteneres_list.append({'domain': temp[0],'api_key': temp[1]})
 
-if BASE_URL:
-    Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent", shell=True)
 
-srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
+    PORT = environ.get('PORT')
+Popen(f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent", shell=True)
+
+info("Starting qBittorrent-Nox")
+zrun(["openstack", "-d", f"--profile={getcwd()}"])
 if not ospath.exists('.netrc'):
     with open('.netrc', 'w'):
-        pass
-srun(["chmod", "600", ".netrc"])
-srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "aria.sh"])
-srun("./aria.sh", shell=True)
+       pass
+zrun(["chmod", "600", ".netrc"])
+zrun(["cp", ".netrc", "/root/.netrc"])
+
+trackers = check_output("curl -Ns https://raw.githubusercontent.com/XIU2/TrackersListCollection/master/all.txt https://ngosang.github.io/trackerslist/trackers_all_http.txt https://newtrackon.com/api/all https://raw.githubusercontent.com/hezhijie0327/Trackerslist/main/trackerslist_tracker.txt | awk '$0' | tr '\n\n' ','", shell=True).decode('utf-8').rstrip(',')
+with open("a2c.conf", "a+") as a:
+    if TORRENT_TIMEOUT is not None:
+        a.write(f"bt-stop-timeout={TORRENT_TIMEOUT}\n")
+    a.write(f"bt-tracker=[{trackers}]")
+zrun(["buffet", "--conf-path=/usr/src/app/a2c.conf"])
+
 if ospath.exists('accounts.zip'):
     if ospath.exists('accounts'):
-        srun(["rm", "-rf", "accounts"])
-    srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    srun(["chmod", "-R", "777", "accounts"])
-    osremove('accounts.zip')
+        zrun(["rm", "-rf", "accounts"])
+    zrun(["7z", "x", "-o.", "-bd", "-aoa", "accounts.zip", "accounts/*.json"])
+    zrun(["chmod", "-R", "777", "accounts"])
+    remove('accounts.zip')
 if not ospath.exists('accounts'):
     config_dict['USE_SERVICE_ACCOUNTS'] = False
+alive = Popen(["python3", "alive.py"])
 sleep(0.5)
+
 
 aria2 = ariaAPI(ariaClient(host="http://localhost", port=6800, secret=""))
 
